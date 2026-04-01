@@ -30,8 +30,9 @@ When I reviewed the skeleton, I noticed that `skipped_tasks` was just a plain li
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers two constraints: time budget (how many minutes the owner has available) and task priority (high / medium / low). It also respects completion status — completed tasks are invisible to the scheduler so they don't crowd out things that still need doing.
+
+Time budget came first because it's the hard constraint — you literally cannot do a 30-minute walk if you only have 20 minutes left. Priority is the tiebreaker that decides which tasks get the available time first. I didn't weight by frequency or species because those would add complexity without meaningfully improving the plan for a single-owner, single-day scenario.
 
 **b. Tradeoffs**
 
@@ -45,13 +46,15 @@ I kept it this way because the alternative — computing end times and checking 
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+AI was useful at almost every stage but in different ways depending on the phase. During design, it helped me think through what classes were needed and catch gaps — for example, it pointed out that `skipped_tasks` as a plain list gave `explain()` nothing to work with, which led to adding `skipped_reasons`. During implementation it was useful for boilerplate-heavy things like the dataclass setup and the `timedelta` recurrence logic, where getting the syntax right quickly let me focus on whether the logic was correct. For testing it was good at generating cases I hadn't thought of, like the zero-budget edge case and the empty-pet scenario.
+
+The most effective prompts were specific and structural: "given this class, what's missing for this method to work?" got better answers than "how do I build a scheduler?" Anchoring questions to actual code rather than describing the problem in the abstract made the responses much more useful.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+When I asked AI to simplify `filter_tasks()`, it suggested collapsing it into a nested list comprehension — shorter, more Pythonic, but genuinely harder to follow at a glance. The two `if` clauses at different levels of the comprehension aren't obvious to someone reading the code for the first time, and this method is one of the first things a new contributor would look at. I kept the explicit loop version. Readability isn't always about line count — sometimes the loop that spells out "filter pets, then filter tasks within each pet" is just clearer than the version that does both in one expression.
+
+I evaluated it by reading both versions out loud. If I had to pause to mentally parse it, that was enough reason to keep the original.
 
 ---
 
@@ -59,13 +62,13 @@ I kept it this way because the alternative — computing end times and checking 
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+The 20 tests cover five areas: task completion and reset, recurrence logic (daily, weekly, and once), chronological sorting with and without start times, conflict detection (true positives, true negatives, and no-time edge case), and the scheduler itself (time budget, priority ordering, completed task exclusion, empty pet, zero budget).
+
+The recurrence and conflict tests were the most important. Recurrence is stateful — completing a task changes the pet's task list — so a bug there could silently produce duplicate tasks or miss next occurrences entirely. Conflict detection needed both positive and negative cases because a detector that warns on everything is just as broken as one that warns on nothing.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+4 out of 5. The logic layer is thoroughly tested and behaved correctly in every case I tried. The gap is the Streamlit wiring — `app.py` has no automated tests, so a session state bug or a broken button handler wouldn't be caught until someone ran the app manually. If I had more time I'd add edge cases for: tasks whose duration exactly equals the remaining budget (boundary condition), an owner with no pets at all, and a pet that has only completed tasks.
 
 ---
 
@@ -73,12 +76,12 @@ I kept it this way because the alternative — computing end times and checking 
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+The separation between the logic layer and the UI ended up being the best structural decision. Because `pawpal_system.py` knew nothing about Streamlit, I could test all the scheduling behavior in isolation, run `main.py` as a quick terminal demo, and then wire everything into the app without touching the logic. When a UI button wasn't working right, the problem was always in `app.py` — never in the scheduler — which made debugging straightforward.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+The greedy scheduling algorithm works but it's naive — it locks in the first high-priority task it sees and won't backtrack even if a different combination of lower-priority tasks would use the time budget more efficiently. For most pet care scenarios this doesn't matter, but a smarter approach would try to maximise total tasks completed (a knapsack-style problem) rather than just filling time in priority order. I'd also add a proper `due_date` filter so the scheduler only considers tasks that are actually due today, not every task ever added to a pet.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+AI is fast at generating code but it has no idea what your system is supposed to feel like from the inside. It will suggest the most compact or "Pythonic" solution to the immediate question without considering how that fits into the broader design — whether the naming is consistent, whether a new class is really needed, or whether a simpler structure already handles the case. The value I added wasn't writing faster than AI could; it was knowing when to say "that's technically correct but it doesn't belong here." Being the lead architect means making those calls, not just accepting whatever gets generated.

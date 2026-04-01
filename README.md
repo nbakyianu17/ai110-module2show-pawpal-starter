@@ -34,6 +34,12 @@
 ### Filtering
 - View only pending tasks, or only tasks for a specific pet — useful for multi-pet households
 
+## Demo
+
+<a href="/course_images/ai110/demo.png" target="_blank"><img src='/course_images/ai110/demo.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
+
+<a href="/course_images/ai110/demo2.png" target="_blank"><img src='/course_images/ai110/demo2.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
+
 ## Scenario
 
 A busy pet owner needs help staying consistent with pet care. They want an assistant that can:

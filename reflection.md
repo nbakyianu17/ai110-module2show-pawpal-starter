@@ -12,13 +12,17 @@ The three core actions a user should be able to perform:
 
 3. **Generate and view today's schedule** — The user triggers the scheduler, which selects and orders tasks based on priority and time available, then displays the resulting plan along with a brief explanation of why each task was included and when it is scheduled.
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+I ended up with five classes. `Pet` and `Task` are simple dataclasses — they just hold data, no real behavior. `Pet` stores the pet's name and species. `Task` holds the task title, how long it takes, and its priority, plus a small helper `is_high_priority()` that the scheduler can call instead of comparing strings directly.
+
+`Owner` is where the task list lives. It made sense to put `add_task`, `remove_task`, and `get_tasks` here since the owner is the one managing what needs to happen each day. The owner also holds a reference to their `Pet` and their `available_minutes`, which is the main time constraint.
+
+`Scheduler` is the brain. It takes an `Owner` and uses everything on it — the task list, the time budget, the pet — to figure out what actually fits in the day. It produces a `DailyPlan`.
+
+`DailyPlan` is the output. It stores which tasks made it in, which ones got cut, and how many minutes were used. The `explain()` method is responsible for turning that into something readable.
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+When I reviewed the skeleton, I noticed that `skipped_tasks` was just a plain list of `Task` objects. That's a problem for `explain()` — if all you have is the task, you can't say *why* it was skipped (did it not fit in the time? was it low priority with nothing left?). So I added a `skipped_reasons` dict to `DailyPlan` that maps task titles to a short reason string. The `Scheduler` will populate this when it builds the plan. It's a small change but it makes `explain()` actually useful instead of just listing names.
 
 ---
 
@@ -31,8 +35,9 @@ The three core actions a user should be able to perform:
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+The conflict detector only flags tasks that share the exact same `start_time` string — it doesn't calculate whether one task's duration overlaps into another's start time. For example, a 30-minute task at 08:00 and a task at 08:15 would not trigger a warning, even though they clearly overlap in real life.
+
+I kept it this way because the alternative — computing end times and checking for interval overlap — adds a fair amount of logic for an edge case that mostly matters for tightly-packed schedules. For a pet care app where most tasks are short and spaced throughout the day, exact-match conflict detection catches the obvious mistakes (two things literally at the same time) without making the code hard to follow. If I were building this for a vet clinic with back-to-back appointments, the interval approach would be worth it.
 
 ---
 
